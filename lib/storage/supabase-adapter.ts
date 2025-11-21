@@ -106,7 +106,7 @@ export class SupabaseStorageAdapter implements StorageAdapter {
       return [];
     }
 
-    return data as LogEntry[];
+    return data as unknown as LogEntry[];
   }
 
   async getLastLog(): Promise<LogEntry | null> {

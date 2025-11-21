@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Database } from '@/lib/supabase/database.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,20 +9,19 @@ import { CompoundAutocomplete } from './CompoundAutocomplete';
 import { CompoundChip } from './CompoundChip';
 import { TagSelector } from './TagSelector';
 import { SentimentSelector } from './SentimentSelector';
-import { COGNITIVE_TAGS, PHYSICAL_TAGS, MOOD_TAGS, Compound } from '@/lib/schemas';
+import { COGNITIVE_TAGS, PHYSICAL_TAGS, MOOD_TAGS, Compound, LogEntry } from '@/lib/schemas';
 import { Check, Copy, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-
-type Log = Database['public']['Tables']['logs']['Row'];
+import { useStorage } from '@/lib/storage';
 
 interface SmartLoggerProps {
-  userId: string;
-  onLogCreated: (log: Log) => void;
-  onLogUpdated: (log: Log) => void;
+  onLogCreated: (log: LogEntry) => void;
+  onLogUpdated: (log: LogEntry) => void;
   onCancel: () => void;
 }
 
-export function SmartLogger({ userId, onLogCreated, onLogUpdated, onCancel }: SmartLoggerProps) {
+export function SmartLogger({ onLogCreated, onLogUpdated, onCancel }: SmartLoggerProps) {
+  const { adapter } = useStorage();
   const [compounds, setCompounds] = useState<Compound[]>([]);
   const [selectedCognitiveTags, setSelectedCognitiveTags] = useState<typeof COGNITIVE_TAGS[number][]>([]);
   const [selectedPhysicalTags, setSelectedPhysicalTags] = useState<typeof PHYSICAL_TAGS[number][]>([]);
@@ -48,9 +45,8 @@ export function SmartLogger({ userId, onLogCreated, onLogUpdated, onCancel }: Sm
     setSaveStatus('saving');
 
     const logData = {
-      user_id: userId,
       occurred_at: new Date(occurredAt).toISOString(),
-      compounds: JSON.parse(JSON.stringify(compounds)),
+      compounds: compounds,
       sentiment_score: sentimentScore,
       tags_cognitive: selectedCognitiveTags,
       tags_physical: selectedPhysicalTags,
@@ -61,37 +57,13 @@ export function SmartLogger({ userId, onLogCreated, onLogUpdated, onCancel }: Sm
     try {
       if (currentLogId) {
         // Update existing log
-        const updateData = {
-          occurred_at: logData.occurred_at,
-          compounds: logData.compounds,
-          sentiment_score: logData.sentiment_score,
-          tags_cognitive: logData.tags_cognitive,
-          tags_physical: logData.tags_physical,
-          tags_mood: logData.tags_mood,
-          notes: logData.notes,
-        };
-        
-        const response = await fetch('/api/logs', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: currentLogId, ...updateData }),
-        });
-        
-        if (!response.ok) throw new Error('Failed to update log');
-        const data = await response.json();
-        onLogUpdated(data);
+        const updatedLog = await adapter.updateLog(currentLogId, logData);
+        onLogUpdated(updatedLog);
       } else {
         // Create new log
-        const response = await fetch('/api/logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(logData),
-        });
-        
-        if (!response.ok) throw new Error('Failed to create log');
-        const data = await response.json();
-        setCurrentLogId(data.id);
-        onLogCreated(data);
+        const newLog = await adapter.createLog(logData);
+        setCurrentLogId(newLog.id!);
+        onLogCreated(newLog);
       }
 
       setSaveStatus('saved');
@@ -102,7 +74,7 @@ export function SmartLogger({ userId, onLogCreated, onLogUpdated, onCancel }: Sm
     } finally {
       setSaving(false);
     }
-  }, [compounds, selectedCognitiveTags, selectedPhysicalTags, selectedMoodTags, sentimentScore, notes, occurredAt, currentLogId, userId, onLogCreated, onLogUpdated]);
+  }, [compounds, selectedCognitiveTags, selectedPhysicalTags, selectedMoodTags, sentimentScore, notes, occurredAt, currentLogId, adapter, onLogCreated, onLogUpdated]);
 
   // Debounced auto-save
   useEffect(() => {
@@ -126,26 +98,19 @@ export function SmartLogger({ userId, onLogCreated, onLogUpdated, onCancel }: Sm
   // Copy yesterday's log
   const copyYesterday = async () => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('logs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('occurred_at', { ascending: false })
-        .limit(1)
-        .single();
+      const lastLog = await adapter.getLastLog();
 
-      if (error || !data) {
+      if (!lastLog) {
         console.error('No previous log found');
         return;
       }
 
       // Pre-fill form with yesterday's data
-      setCompounds(data.compounds as Compound[]);
-      setSelectedCognitiveTags(data.tags_cognitive as typeof COGNITIVE_TAGS[number][]);
-      setSelectedPhysicalTags(data.tags_physical as typeof PHYSICAL_TAGS[number][]);
-      setSelectedMoodTags(data.tags_mood as typeof MOOD_TAGS[number][]);
-      setSentimentScore(data.sentiment_score);
+      setCompounds(lastLog.compounds as Compound[]);
+      setSelectedCognitiveTags(lastLog.tags_cognitive as typeof COGNITIVE_TAGS[number][]);
+      setSelectedPhysicalTags(lastLog.tags_physical as typeof PHYSICAL_TAGS[number][]);
+      setSelectedMoodTags(lastLog.tags_mood as typeof MOOD_TAGS[number][]);
+      setSentimentScore(lastLog.sentiment_score);
       // Don't copy notes to avoid duplication
       setNotes('');
       

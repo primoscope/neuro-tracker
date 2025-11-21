@@ -80,7 +80,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
   }
 
-  private getLogs(): LogEntry[] {
+  private getStoredLogs(): LogEntry[] {
     if (!this.isAvailable()) return [];
     
     const logsStr = localStorage.getItem(STORAGE_KEYS.LOGS);
@@ -99,7 +99,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async createLog(log: Omit<LogEntry, 'id'>): Promise<LogEntry> {
-    const logs = this.getLogs();
+    const logs = this.getStoredLogs();
     
     const newLog: LogEntry = {
       ...log,
@@ -113,7 +113,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async updateLog(id: string, updates: Partial<LogEntry>): Promise<LogEntry> {
-    const logs = this.getLogs();
+    const logs = this.getStoredLogs();
     const index = logs.findIndex(l => l.id === id);
     
     if (index === -1) {
@@ -128,7 +128,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async getLogs(limit?: number): Promise<LogEntry[]> {
-    const logs = this.getLogs();
+    const logs = this.getStoredLogs();
     
     // Sort by occurred_at descending
     const sorted = logs.sort((a, b) => 
@@ -148,14 +148,14 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async deleteLog(id: string): Promise<void> {
-    const logs = this.getLogs();
+    const logs = this.getStoredLogs();
     const filtered = logs.filter(l => l.id !== id);
     this.saveLogs(filtered);
   }
 
   async exportData() {
     return {
-      logs: this.getLogs(),
+      logs: this.getStoredLogs(),
       user: await this.getUser(),
       exportedAt: new Date().toISOString(),
       version: '2.0.0',
