@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthGuard } from "@/components/AuthGuard";
-
-const inter = Inter({ subsets: ["latin"] });
+import { StorageProvider } from "@/lib/storage";
 
 export const metadata: Metadata = {
   title: "NeuroStack - Medication Tracker",
-  description: "Offline-first medication and supplement tracking with AI analysis",
+  description: "Flexible medication and supplement tracking with cloud sync or local storage",
 };
 
 export default function RootLayout({
@@ -17,8 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
-        <AuthGuard>{children}</AuthGuard>
+      <body className="font-sans antialiased">
+        <StorageProvider>
+          {children}
+        </StorageProvider>
       </body>
     </html>
   );
