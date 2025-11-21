@@ -1,18 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
-
-export default async function HomePage() {
-  const supabase = await createClient();
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect('/logs');
-  } else {
-    redirect('/login');
-  }
+export default function HomePage() {
+  // Redirect to auth page - storage detection happens client-side
+  redirect('/auth');
 }

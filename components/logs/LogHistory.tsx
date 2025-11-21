@@ -1,14 +1,11 @@
 'use client';
 
-import { Database } from '@/lib/supabase/database.types';
-import { SENTIMENT_OPTIONS, Compound } from '@/lib/schemas';
+import { LogEntry, SENTIMENT_OPTIONS, Compound } from '@/lib/schemas';
 import { format } from 'date-fns';
 import { Clock } from 'lucide-react';
 
-type Log = Database['public']['Tables']['logs']['Row'];
-
 interface LogHistoryProps {
-  logs: Log[];
+  logs: LogEntry[];
 }
 
 export function LogHistory({ logs }: LogHistoryProps) {

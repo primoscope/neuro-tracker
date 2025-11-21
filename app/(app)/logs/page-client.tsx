@@ -1,42 +1,72 @@
 'use client';
 
-import { useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { Database } from '@/lib/supabase/database.types';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, LogOut } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Plus, LogOut, Cloud, HardDrive } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { SmartLogger } from '@/components/logs/SmartLogger';
 import { LogHistory } from '@/components/logs/LogHistory';
+import { useStorage } from '@/lib/storage';
+import { LogEntry } from '@/lib/schemas';
 
-type Log = Database['public']['Tables']['logs']['Row'];
-
-interface LogsPageClientProps {
-  initialLogs: Log[];
-  user: User;
-}
-
-export default function LogsPageClient({ initialLogs, user }: LogsPageClientProps) {
+export default function LogsPageClient() {
+  const { adapter, mode, isReady } = useStorage();
   const [isLoggerOpen, setIsLoggerOpen] = useState(false);
-  const [logs, setLogs] = useState<Log[]>(initialLogs);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const supabase = createClient();
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!isReady) return;
+      
+      // Check auth
+      const currentUser = await adapter.getUser?.();
+      if (!currentUser) {
+        router.push('/auth');
+        return;
+      }
+      
+      setUser(currentUser);
+      
+      // Load logs
+      const userLogs = await adapter.getLogs(20);
+      setLogs(userLogs);
+      setLoading(false);
+    };
+    
+    loadData();
+  }, [adapter, isReady, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
+    if (adapter.signOut) {
+      await adapter.signOut();
+    }
+    router.push('/auth');
     router.refresh();
   };
 
-  const handleLogCreated = (newLog: Log) => {
+  const handleLogCreated = (newLog: LogEntry) => {
     setLogs([newLog, ...logs]);
   };
 
-  const handleLogUpdated = (updatedLog: Log) => {
+  const handleLogUpdated = (updatedLog: LogEntry) => {
     setLogs(logs.map(log => log.id === updatedLog.id ? updatedLog : log));
   };
+
+  if (!isReady || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-slate-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -45,7 +75,19 @@ export default function LogsPageClient({ initialLogs, user }: LogsPageClientProp
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-blue-500">NeuroStack</h1>
-            <p className="text-sm text-slate-400">Track your stack</p>
+            <p className="text-sm text-slate-400 flex items-center gap-2">
+              {mode === 'local' ? (
+                <>
+                  <HardDrive className="w-3 h-3" />
+                  Local Storage
+                </>
+              ) : (
+                <>
+                  <Cloud className="w-3 h-3" />
+                  Cloud Sync
+                </>
+              )}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -73,7 +115,6 @@ export default function LogsPageClient({ initialLogs, user }: LogsPageClientProp
             </CardHeader>
             <CardContent>
               <SmartLogger
-                userId={user.id}
                 onLogCreated={handleLogCreated}
                 onLogUpdated={handleLogUpdated}
                 onCancel={() => setIsLoggerOpen(false)}

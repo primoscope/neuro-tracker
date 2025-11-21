@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { StorageProvider } from "@/lib/storage";
 
 export const metadata: Metadata = {
   title: "NeuroStack - Medication Tracker",
-  description: "Offline-first medication and supplement tracking with AI analysis",
+  description: "Flexible medication and supplement tracking with cloud sync or local storage",
 };
 
 export default function RootLayout({
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased">
-        {children}
+        <StorageProvider>
+          {children}
+        </StorageProvider>
       </body>
     </html>
   );
