@@ -4,7 +4,7 @@
   "description": "NeuroStack - Offline-First Medication Tracking App",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-https://placeholder.supabase.co} NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder} next build",
     "start": "next start",
     "lint": "next lint"
   },

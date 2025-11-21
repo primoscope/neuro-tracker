@@ -1,8 +1,16 @@
 # 🧬 NeuroStack V2 - Universal Nootropic Tracker
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/primoscope/Neuro-stack-tracker)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/primoscope/neuro-tracker)
 
-A production-ready, **offline-first** web application for tracking medications, supplements, and nootropics. Built for bio-hackers who need detailed correlation analysis between their stacks and mental state.
+A production-ready web application for tracking medications, supplements, and nootropics. Built for bio-hackers who need detailed tracking and analysis of their stacks.
+
+## 🆕 New: Supabase + Next.js Version
+
+This repository now includes a fully refactored version using **Supabase** for authentication and data storage, with a mobile-first smart logging interface.
+
+**See [README-SUPABASE.md](./README-SUPABASE.md) for setup instructions for the new version.**
+
+The original LocalStorage version is still available on the `main` branch.
 
 ## ✨ Key Features
 
